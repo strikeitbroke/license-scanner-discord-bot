@@ -127,7 +127,6 @@ def get_first_seen(plate_number: str) -> Message | None:
 
 @client.event
 async def on_message(message):
-    print("reach here")
     if message.channel.id != CHANNEL_ID:
         return
     if message.author == client.user:
