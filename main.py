@@ -16,8 +16,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-CHANNEL_ID = os.getenv("CHANNEL_ID")
+CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 PR_API_TOKEN = os.getenv("PR_API_TOKEN")
+print(DISCORD_TOKEN)
+print(CHANNEL_ID)
+print(PR_API_TOKEN)
 intents = discord.Intents.default()
 intents.message_content = True
 client = discord.Client(intents=intents)
@@ -124,6 +127,7 @@ def get_first_seen(plate_number: str) -> Message | None:
 
 @client.event
 async def on_message(message):
+    print("reach here")
     if message.channel.id != CHANNEL_ID:
         return
     if message.author == client.user:
@@ -154,4 +158,4 @@ async def on_message(message):
         await message.channel.send(reply)
 
 
-client.run(TOKEN)
+client.run(DISCORD_TOKEN)
