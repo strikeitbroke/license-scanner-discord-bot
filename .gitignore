@@ -10,3 +10,7 @@ wheels/
 .venv
 .env
 *.db
+secrets.tfvars
+.terraform
+aws/
+infra/terraform/aws/
