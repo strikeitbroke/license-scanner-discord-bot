@@ -51,7 +51,7 @@ def extract_plate_text_from_image(url):
 
 
 def set_message_loaded():
-    with SessionLocal() as session:
+    with db.SessionLocal() as session:
         # Try to fetch the first row
         flag = session.query(MessageLoaded).first()
 
