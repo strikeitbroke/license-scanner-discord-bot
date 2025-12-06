@@ -73,7 +73,7 @@ resource "aws_instance" "license_scanner_bot" {
         -e DISCORD_TOKEN="${var.discord_token}" \
         -e CHANNEL_ID="${var.channel_id}" \
         -e PR_API_TOKEN="${var.pr_api_token}" \
-        390403880719.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:v1.0.0 
+        390403880719.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest 
     EOF
 }
 
@@ -131,9 +131,14 @@ resource "aws_iam_role" "ec2_ecr_role" {
 
 resource "aws_iam_role_policy_attachment" "ec2_ecr_readonly" {
   role       = aws_iam_role.ec2_ecr_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess"
 }
 
+
+resource "aws_iam_role_policy_attachment" "ssm_core" {
+  role       = aws_iam_role.ec2_ecr_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
 
 resource "aws_iam_instance_profile" "ec2_ecr_instance_profile" {
   name = "ec2-ecr-instance-profile"

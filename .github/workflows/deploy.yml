@@ -1,36 +1,64 @@
-name: Deploy License Plate Scanner Discord Bot to ECR
+name: Deploy Discord Bot
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
+
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Check out repo
+        uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Set AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # ------------------------------
+      # DOCKER BUILD + PUSH TO ECR
+      # ------------------------------
 
       - name: Login to Amazon ECR
-        id: login-ecr
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
-            | docker login --username AWS --password-stdin 123456789012.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build Docker image
-        run: docker build -t license_scanner_bot .
+        run: docker build -t license_scanner_bot:latest .
 
-      - name: Tag Docker image
-        run: docker tag license_scanner_bot:latest 123456789012.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/license_scanner_bot:latest
+      - name: Tag image
+        run: |
+          docker tag license_scanner_bot:latest \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest
 
-      - name: Push Docker image to ECR
-        run: docker push 123456789012.dkr.ecr.${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com/license_scanner_bot:latest
+      - name: Push to ECR
+        run: |
+          docker push \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest
+
+      # ------------------------------
+      # DEPLOY USING SSM
+      # ------------------------------
+
+      - name: Deploy on EC2 using SSM
+        run: |
+          aws ssm send-command \
+            --instance-ids "${{ secrets.EC2_INSTANCE_ID }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy new Discord bot version" \
+            --parameters commands='[
+              "sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest",
+              "sudo docker stop license_scanner_bot || true",
+              "sudo docker rm license_scanner_bot || true",
+              "sudo docker run -d --name license_scanner_bot \
+                  -e DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }} \
+                  -e PR_API_TOKEN=${{ secrets.PR_API_TOKEN }} \
+                  -e CHANNEL_ID=${{ secrets.CHANNEL_ID }} \
+                  ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest"
+            ]'
