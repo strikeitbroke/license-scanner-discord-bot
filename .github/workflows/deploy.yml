@@ -53,6 +53,7 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --comment "Deploy new Discord bot version" \
             --parameters commands='[
+              "sudo aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com",
               "sudo docker pull ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest",
               "sudo docker stop license_scanner_bot || true",
               "sudo docker rm license_scanner_bot || true",
