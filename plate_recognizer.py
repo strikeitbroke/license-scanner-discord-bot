@@ -13,6 +13,7 @@ class PlateAPIResponse(BaseModel):
 
 
 class MessageBase(BaseModel):
+    channel_id: int
     plate_number: str | None = None
     sent_at: datetime
     author: str
