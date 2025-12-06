@@ -1,21 +1,12 @@
-variable "discord_token" {
-  description = "The Discord bot token"
-  type        = string
-  sensitive   = true
+terraform {
+  required_version = ">=1.14.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
 }
-
-variable "pr_api_token" {
-  description = "PR API token"
-  type        = string
-  sensitive   = true
-}
-
-variable "channel_id" {
-  description = "PR API token"
-  type        = string
-  sensitive   = true
-}
-
 provider "aws" {
   region = "us-east-1"
 }
@@ -60,20 +51,6 @@ resource "aws_instance" "license_scanner_bot" {
       sudo usermod -aG docker ec2-user
       systemctl start docker
       systemctl enable docker
-
-      # Login to ECR (uses IAM role)
-      aws ecr get-login-password --region us-east-1 \
-        | docker login --username AWS --password-stdin 390403880719.dkr.ecr.us-east-1.amazonaws.com
-
-      # Pull your bot image
-      docker pull 390403880719.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:v1.0.0
-
-      # Run the container
-      docker run -d --name license_scanner_bot \
-        -e DISCORD_TOKEN="${var.discord_token}" \
-        -e CHANNEL_ID="${var.channel_id}" \
-        -e PR_API_TOKEN="${var.pr_api_token}" \
-        390403880719.dkr.ecr.us-east-1.amazonaws.com/license_scanner_bot:latest 
     EOF
 }
 
@@ -81,6 +58,7 @@ resource "aws_ecr_repository" "license_scanner_bot" {
   name                 = "license_scanner_bot"
   image_tag_mutability = "MUTABLE"
 
+  force_delete = true
   image_scanning_configuration {
     scan_on_push = true
   }
