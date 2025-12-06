@@ -109,7 +109,14 @@ resource "aws_ecr_lifecycle_policy" "license_scanner_bot_policy" {
 }
 EOF
 }
+# Required data source to get AWS account ID
+data "aws_caller_identity" "current" {}
 
+resource "aws_iam_openid_connect_provider" "github" {
+  url             = "https://token.actions.githubusercontent.com"
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
+}
 
 resource "aws_iam_role" "ec2_ecr_role" {
   name = "ec2-ecr-role"
@@ -117,12 +124,26 @@ resource "aws_iam_role" "ec2_ecr_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
     Statement = [
+      # Existing EC2 trust
       {
         Effect = "Allow",
         Principal = {
           Service = "ec2.amazonaws.com"
         },
         Action = "sts:AssumeRole"
+      },
+      # GitHub Actions OIDC trust
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            "token.actions.githubusercontent.com:sub" = "repo:strikeitbroke/license-scanner-discord-bot:ref:refs/heads/main"
+          }
+        }
       }
     ]
   })
@@ -137,7 +158,7 @@ resource "aws_iam_role_policy_attachment" "ec2_ecr_readonly" {
 
 resource "aws_iam_role_policy_attachment" "ssm_core" {
   role       = aws_iam_role.ec2_ecr_role.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
 }
 
 resource "aws_iam_instance_profile" "ec2_ecr_instance_profile" {
