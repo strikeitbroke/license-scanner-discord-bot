@@ -10,6 +10,6 @@ WORKDIR /app
 
 RUN uv sync --locked
 
-RUN chmod +x /entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 CMD ["./entrypoint.sh"]
